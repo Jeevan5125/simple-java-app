@@ -1,29 +1,41 @@
-apiVersion: apps/v1 
-kind: Deployment 
-metadata: 
-  name: java-app 
-spec: 
-  replicas: 2 
-  selector: 
-    matchLabels: 
-      app: java-app 
-  template: 
-    metadata: 
-      labels: 
-        app: java-app 
-    spec: 
-      containers: 
-      - name: java-app 
-        image: <dockerhub-username>/java-app:latest --- 
-apiVersion: v1 
-kind: Service 
-metadata: 
-  name: java-service 
-spec: 
-  type: NodePort 
-  selector: 
-    app: java-app 
-  ports: 
-    - port: 80 
-      targetPort: 8080 
-      nodePort: 30008
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pricing-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: pricing
+  template:
+    metadata:
+      labels:
+        app: pricing
+    spec:
+      containers:
+      - name: pricing-engine
+        image: rideshare-pricing:latest
+        resources:
+          limits:
+            cpu: "500m"
+          requests:
+            cpu: "200m"
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: pricing-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pricing-service
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
